@@ -1,15 +1,19 @@
 # RecipeVault — CSE323 Advanced Database Systems
-## Comprehensive Project Deliverables
+## Comprehensive Project Documentation & Deliverables
 
 > **Course:** CSE323 — Advanced Database Systems  
 > **Application:** RecipeVault — NoSQL Recipe Book  
 > **Tech Stack:** HTML · CSS · Vanilla JavaScript · Node.js · Express · MongoDB (Mongoose) · Docker  
+> **Repository:** [github.com/ArwaMohey/ADB-Project](https://github.com/ArwaMohey/ADB-Project)
 
 ---
 
 ## Table of Contents
 
 1. [Project Proposal](#1-project-proposal)
+   - [1.1 Application Idea](#11-application-idea)
+   - [1.2 Target Audience](#12-target-audience)
+   - [1.3 Rationale for Choosing MongoDB](#13-rationale-for-choosing-mongodb-over-a-relational-database)
 2. [System Design & UML Diagrams](#2-system-design--uml-diagrams)
    - [2.1 Use Case Diagram](#21-use-case-diagram)
    - [2.2 Sequence Diagram — Create & View Recipe](#22-sequence-diagram--create--view-recipe)
@@ -24,6 +28,8 @@
    - [3.2 Design Decisions & Implementation Details](#32-design-decisions--implementation-details)
    - [3.3 Running & Testing with Docker](#33-running--testing-with-docker)
    - [3.4 Sorting Algorithm — Efficiency & Time Complexity](#34-sorting-algorithm--efficiency--time-complexity)
+   - [3.5 API Reference](#35-api-reference)
+   - [3.6 File & Directory Structure](#36-file--directory-structure)
 4. [Presentation Outline](#4-presentation-outline)
 
 ---
@@ -92,26 +98,59 @@ The Mongoose Object Document Mapper provides schema-level validation, enum enfor
 
 ```plantuml
 @startuml RecipeVault_UseCaseDiagram
-skinparam monochrome true
-left to right direction
-skinparam packageStyle rectangle
-skinparam usecase {
-  FontSize 13
+
+title RecipeVault — Use Case Diagram\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+
+skinparam actor {
+  BackgroundColor #1565C0
+  BorderColor     #0D47A1
+  FontColor       #FFFFFF
+  FontStyle       bold
 }
 
-actor User
+skinparam usecase {
+  BackgroundColor #E3F2FD
+  BorderColor     #1565C0
+  FontColor       #0D47A1
+  FontSize        12
+  BorderThickness 2
+}
 
-rectangle "RecipeVault — NoSQL Recipes Application" {
+skinparam rectangle {
+  BackgroundColor #F5F5F5
+  BorderColor     #1565C0
+  BorderThickness 2
+  FontColor       #1565C0
+  FontStyle       bold
+}
 
-  usecase "View Recipes List"    as UC1
-  usecase "View Recipe Details"  as UC2
-  usecase "Search Recipes"       as UC3
-  usecase "Filter by Category"   as UC4
-  usecase "Sort Recipes"         as UC5
-  usecase "View Stats Bar"       as UC6
-  usecase "Create Recipe"        as UC7
-  usecase "Edit Recipe"          as UC8
-  usecase "Delete Recipe"        as UC9
+skinparam ArrowColor #1565C0
+skinparam ArrowThickness 1.5
+
+left to right direction
+
+actor "  User  " as User
+
+rectangle "RecipeVault — NoSQL Recipe Management System" {
+
+  package "Read Operations" #E8F5E9 {
+    usecase "View Recipes List"   as UC1
+    usecase "View Recipe Details" as UC2
+    usecase "Search Recipes"      as UC3
+    usecase "Filter by Category"  as UC4
+    usecase "Sort Recipes"        as UC5
+    usecase "View Statistics Bar" as UC6
+  }
+
+  package "Write Operations" #FFF3E0 {
+    usecase "Create New Recipe"   as UC7
+    usecase "Edit Recipe"         as UC8
+    usecase "Delete Recipe"       as UC9
+  }
 
 }
 
@@ -125,11 +164,23 @@ User --> UC7
 User --> UC8
 User --> UC9
 
-UC3 .> UC1 : «extend»
-UC4 .> UC1 : «extend»
-UC5 .> UC1 : «extend»
-UC8 .> UC2 : «extend»
-UC9 .> UC2 : «extend»
+UC3 .> UC1 : <<extend>>
+UC4 .> UC1 : <<extend>>
+UC5 .> UC1 : <<extend>>
+UC8 .> UC2 : <<extend>>
+UC9 .> UC2 : <<extend>>
+
+note bottom of UC3
+  Real-time regex search
+  across name, description
+  and ingredients fields
+end note
+
+note bottom of UC7
+  All write operations trigger
+  Mongoose validation before
+  MongoDB write
+end note
 
 @enduml
 ```
@@ -142,31 +193,99 @@ UC9 .> UC2 : «extend»
 
 ```plantuml
 @startuml RecipeVault_Sequence_CreateView
-skinparam monochrome true
+
+title RecipeVault — Sequence Diagram: Create & View Recipe\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
 skinparam sequenceMessageAlign center
 
-actor User
-participant "Frontend\n(HTML / JS)" as FE
-participant "Backend\n(Node.js / Express)" as BE
-participant "MongoDB" as DB
+skinparam participant {
+  BackgroundColor #E3F2FD
+  BorderColor     #1565C0
+  FontColor       #0D47A1
+  FontStyle       bold
+}
 
-== CREATE RECIPE ==
+skinparam actor {
+  BackgroundColor #1565C0
+  BorderColor     #0D47A1
+  FontColor       #1565C0
+}
 
-User -> FE    : Enter recipe data\n(name, category, times, etc.)
-FE   -> BE    : POST /api/recipes\n{ name, category, … }
-BE   -> DB    : insertOne(recipeDoc)
-DB   --> BE   : Document created (ObjectId assigned)
-BE   --> FE   : 201 Created\n{ _id, name, category, … }
-FE   --> User : Success toast +\ngrid re-rendered
+skinparam sequence {
+  ArrowColor          #1565C0
+  ArrowThickness      1.8
+  LifeLineBorderColor #1565C0
+  LifeLineBackgroundColor #E3F2FD
+  GroupBackgroundColor    #E8F5E9
+  GroupBorderColor        #2E7D32
+  GroupHeaderFontColor    #1B5E20
+  GroupFontStyle          bold
+  DividerBackgroundColor  #FFF9C4
+  DividerBorderColor      #F9A825
+}
 
-== VIEW RECIPE ==
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+}
 
-User -> FE    : Click recipe card
-FE   -> BE    : GET /api/recipes/:id
-BE   -> DB    : findById(id)
-DB   --> BE   : Recipe document
-BE   --> FE   : 200 OK\n{ _id, name, ingredients, … }
-FE   --> User : Recipe detail modal displayed
+actor        "User"                    as User
+participant  "Frontend\n(HTML / JS)"   as FE #E3F2FD
+participant  "Backend\n(Node / Express)" as BE #FFF3E0
+participant  "MongoDB"                 as DB #E8F5E9
+
+== ➕  CREATE RECIPE ==
+
+User  ->  FE  : Fill form fields\n(name, category, times, etc.)
+activate FE
+
+FE    ->  BE  : POST /api/recipes\n{ name, category, prepTime, … }
+activate BE
+
+BE    ->  BE  : sanitiseRecipeBody()\n+ Mongoose validation
+BE    ->  DB  : Recipe.create(data)\n≡ db.recipes.insertOne(data)
+activate DB
+
+DB   -->  BE  : 201 — Saved document\n{ _id: ObjectId, createdAt, … }
+deactivate DB
+
+BE   -->  FE  : HTTP 201 Created\n{ _id, name, category, … }
+deactivate BE
+
+FE   -->  User : ✓ Toast "Recipe added"\nPrepend card to grid
+deactivate FE
+
+|||
+
+== 🔍  VIEW RECIPE ==
+
+User  ->  FE  : Click recipe card
+activate FE
+
+FE    ->  BE  : GET /api/recipes/:id
+activate BE
+
+BE    ->  DB  : Recipe.findById(id)\n≡ db.recipes.findOne({ _id })
+activate DB
+
+DB   -->  BE  : Recipe document (full)
+deactivate DB
+
+BE   -->  FE  : HTTP 200 OK\n{ _id, name, ingredients, … }
+deactivate BE
+
+FE   -->  User : Recipe detail modal displayed\n(HTML-encoded via esc())
+deactivate FE
+
+note over DB
+  Both operations use
+  indexed fields for
+  O(log n) performance
+end note
 
 @enduml
 ```
@@ -179,53 +298,108 @@ FE   --> User : Recipe detail modal displayed
 
 ```plantuml
 @startuml RecipeVault_Sequence_Lifecycle
-skinparam monochrome true
+
+title RecipeVault — Recipe Lifecycle Sequence Diagram\n(Create · Update · Delete)\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
 skinparam sequenceMessageAlign center
 
-actor User
-participant "Frontend\n(HTML / JS)"      as FE
-participant "Security Layer\n(CORS + Rate Limit)" as SEC
-participant "Backend\n(Node.js / Express)" as BE
-participant MongoDB                       as DB
+skinparam participant {
+  BackgroundColor #E3F2FD
+  BorderColor     #1565C0
+  FontColor       #0D47A1
+  FontStyle       bold
+}
 
-== Create Recipe Flow ==
+skinparam actor {
+  BackgroundColor #1565C0
+  BorderColor     #0D47A1
+  FontColor       #1565C0
+}
+
+skinparam sequence {
+  ArrowColor              #1565C0
+  ArrowThickness          1.8
+  LifeLineBorderColor     #1565C0
+  LifeLineBackgroundColor #E3F2FD
+  GroupBackgroundColor    #E8F5E9
+  GroupBorderColor        #2E7D32
+  GroupHeaderFontColor    #1B5E20
+  GroupFontStyle          bold
+  DividerBackgroundColor  #FFF9C4
+  DividerBorderColor      #F9A825
+}
+
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+}
+
+actor       "User"                               as User
+participant "Frontend\n(HTML / JS)"              as FE  #E3F2FD
+participant "Security Layer\n(CORS + Rate Limit)" as SEC #FCE4EC
+participant "Backend\n(Node.js / Express)"       as BE  #FFF3E0
+participant "MongoDB"                            as DB  #E8F5E9
+
+== ➕  CREATE RECIPE ==
 
 User -> FE  : Fill form → click Save
 FE   -> SEC : POST /api/recipes
-SEC  -> SEC : Check rate limit\n(100 req / 15 min)
-SEC  --> FE : 429 Too Many Requests (if exceeded)
-SEC  -> BE  : Forward request
+SEC  -> SEC : Check rate limit\n(100 req / 15 min per IP)
+
+alt Rate limit exceeded
+  SEC --> FE : ⚠ HTTP 429 Too Many Requests
+end
+
+SEC  -> BE  : Forward valid request
 BE   -> BE  : sanitiseRecipeBody(body)\nvalidate enum fields
+
 BE   -> DB  : Recipe.create(data)\n≡ db.recipes.insertOne(data)
-DB   --> BE : Saved document (_id, timestamps)
-BE   --> SEC: 201 Created { recipe }
-SEC  --> FE : 201 Created
-FE   --> User : Toast "Recipe added" +\nprepend card to grid
+DB  --> BE  : Saved document\n(_id, timestamps assigned)
+BE  --> SEC : HTTP 201 Created { recipe }
+SEC --> FE  : HTTP 201 Created
+FE  --> User : ✓ Toast "Recipe added"\nPrepend card to grid
 
-== Update Recipe Flow ==
+|||
 
-User -> FE  : Click Edit → modify → Save
+== ✏️  UPDATE RECIPE ==
+
+User -> FE  : Click Edit → modify fields → Save
 FE   -> SEC : PUT /api/recipes/:id\n{ updated fields }
 SEC  -> SEC : Check rate limit
-SEC  -> BE  : Forward request
+SEC  -> BE  : Forward valid request
 BE   -> BE  : sanitiseRecipeBody(body)\nwhitelist updatable fields
-BE   -> DB  : Recipe.findByIdAndUpdate(id, updates,\n{ new:true, runValidators:true })\n≡ db.recipes.updateOne({ _id }, { $set })
-DB   --> BE : Updated document
-BE   --> SEC: 200 OK { recipe }
-SEC  --> FE : 200 OK
-FE   --> User : Toast "Recipe updated" +\ncard refreshed in grid
 
-== Delete Recipe Flow ==
+BE   -> DB  : Recipe.findByIdAndUpdate(id, updates,\n{ new:true, runValidators:true })\n≡ db.recipes.updateOne({ _id },{ $set })
+DB  --> BE  : Updated document
+BE  --> SEC : HTTP 200 OK { recipe }
+SEC --> FE  : HTTP 200 OK
+FE  --> User : ✓ Toast "Recipe updated"\nCard refreshed in grid
+
+|||
+
+== 🗑️  DELETE RECIPE ==
 
 User -> FE  : Click Delete → confirm dialog
 FE   -> SEC : DELETE /api/recipes/:id
 SEC  -> SEC : Check rate limit
-SEC  -> BE  : Forward request
+SEC  -> BE  : Forward valid request
+
 BE   -> DB  : Recipe.findByIdAndDelete(id)\n≡ db.recipes.deleteOne({ _id })
-DB   --> BE : Deleted document (confirmation)
-BE   --> SEC: 200 OK { message: "Recipe deleted" }
-SEC  --> FE : 200 OK
-FE   --> User : Toast "Recipe deleted" +\ncard removed from grid
+DB  --> BE  : Deleted document (confirmation)
+BE  --> SEC : HTTP 200 OK { message: "Recipe deleted" }
+SEC --> FE  : HTTP 200 OK
+FE  --> User : ✓ Toast "Recipe deleted"\nCard removed from grid
+
+note over SEC
+  All write operations pass through
+  the security layer regardless of
+  HTTP method. Rate limit is tracked
+  per IP across all /api routes.
+end note
 
 @enduml
 ```
@@ -238,57 +412,93 @@ FE   --> User : Toast "Recipe deleted" +\ncard removed from grid
 
 ```plantuml
 @startuml RecipeVault_Architecture
-skinparam monochrome true
+
+title RecipeVault — System Architecture Overview\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
 skinparam componentStyle rectangle
+
 skinparam package {
-  FontStyle bold
+  FontStyle       bold
+  FontSize        13
+  BorderThickness 2
 }
 
-package "Frontend (Nginx + HTML / CSS / JS)" {
-  [Recipes Grid Page]    as PG
-  [Recipe Detail Modal]  as PD
-  [Create / Edit Form]   as PF
-  [Search & Filter Bar]  as PS
+skinparam component {
+  FontSize        11
+  BorderThickness 1.5
 }
 
-package "Security Layer" {
-  [CORS Policy\n(allowedOrigins)]          as CORS
-  [Rate Limiter\n(100 req / 15 min)]       as RL
+skinparam ArrowColor     #37474F
+skinparam ArrowThickness 1.6
+
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+  FontSize        10
 }
 
-package "Backend (Node.js / Express 4)" {
-  [Recipe Router\n/api/recipes]            as Router
-  [Recipe Controller\n(CRUD handlers)]     as Ctrl
-  [Input Sanitizer\n(sanitiseRecipeBody\nescapeRegex)]  as San
-  [Mongoose ODM\n(v7.x)]                   as ODM
-  [Error Handler\n(middleware)]            as EH
+package "🌐  Frontend  (Nginx · HTML · CSS · Vanilla JS)" #E3F2FD {
+  [Recipes Grid Page]         as PG  #BBDEFB
+  [Recipe Detail Modal]       as PD  #BBDEFB
+  [Create / Edit Form]        as PF  #BBDEFB
+  [Search · Filter · Sort Bar] as PS  #BBDEFB
 }
 
-package "MongoDB Layer" {
-  database "recipes Collection" as Col
-  [Text Index\nname (×10) · ingredients (×5) · description (×1)] as TI
-  [Category Index\n(enum filter)]          as CI
-  [createdAt Index\n(sort: newest / oldest)] as DI
+package "🛡️  Security Layer" #FCE4EC {
+  [CORS Policy\n(allowedOrigins whitelist)]        as CORS  #F8BBD9
+  [Rate Limiter\n(100 req / 15 min per IP)]        as RL    #F8BBD9
 }
 
-PG  --> CORS
-PD  --> CORS
-PF  --> CORS
-PS  --> CORS
+package "⚙️  Backend  (Node.js 18 · Express 4)" #FFF3E0 {
+  [Recipe Router\n/api/recipes]                    as Router  #FFE0B2
+  [Recipe Controller\n(CRUD handlers)]             as Ctrl    #FFE0B2
+  [Input Sanitizer\n(sanitiseRecipeBody · escapeRegex)] as San #FFE0B2
+  [Mongoose ODM v7.x\n(Schema · Validation · Hooks)] as ODM  #FFE0B2
+  [Central Error Handler\n(errorHandler middleware)] as EH   #FFE0B2
+}
 
-CORS --> RL       : Security Headers
-RL   --> Router   : All Requests
+package "🗄️  Data Layer  (MongoDB 6)" #E8F5E9 {
+  database "recipes\nCollection" as Col  #C8E6C9
 
-Router --> Ctrl   : Route dispatch
-Ctrl   --> San    : validate & sanitise
-San    --> ODM    : clean data → Mongoose model
-ODM    --> Col    : find · create\nfindByIdAndUpdate\nfindByIdAndDelete
+  [Text Index\nname(×10) · ingredients(×5) · description(×1)\n→ $text / $regex search] as TI  #A5D6A7
+  [Category Index\n{ category: 1 }\n→ filter by category enum]                          as CI  #A5D6A7
+  [Timestamp Index\n{ createdAt: -1 }\n→ newest / oldest sort]                          as DI  #A5D6A7
+}
+
+PG  -down-> CORS
+PD  -down-> CORS
+PF  -down-> CORS
+PS  -down-> CORS
+
+CORS -right-> RL    : Security headers applied
+RL   -down->  Router : All /api requests
+
+Router -down-> Ctrl  : Route dispatch
+Ctrl   -down-> San   : Validate & sanitise input
+San    -down-> ODM   : Clean data → Mongoose model
+ODM    -down-> Col   : find · create\nfindByIdAndUpdate · findByIdAndDelete
 
 Col --> TI
 Col --> CI
 Col --> DI
 
-Ctrl --> EH : next(err)
+Ctrl --> EH : next(err) on failure
+
+note right of EH
+  Converts Mongoose ValidationError
+  and CastError to safe HTTP responses.
+  Raw stack traces are never exposed.
+end note
+
+note bottom of TI
+  Weighted inverted index enables
+  relevance-ranked full-text search
+  without external search engine.
+end note
 
 @enduml
 ```
@@ -301,52 +511,107 @@ Ctrl --> EH : next(err)
 
 ```plantuml
 @startuml RecipeVault_Deployment
-skinparam monochrome true
+
+title RecipeVault — Docker Deployment Architecture\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
 skinparam componentStyle rectangle
+
 skinparam package {
-  FontStyle bold
+  FontStyle       bold
+  FontSize        12
+  BorderThickness 2
 }
 
-package "Docker Compose" {
-  artifact "docker-compose.yml" as YML
+skinparam node {
+  BackgroundColor #E3F2FD
+  BorderColor     #1565C0
+  FontColor       #0D47A1
+  BorderThickness 2
 }
 
-package "Docker Host" {
+skinparam database {
+  BackgroundColor #E8F5E9
+  BorderColor     #2E7D32
+  FontColor       #1B5E20
+}
 
-  package "Frontend Container\nrecipevault-frontend" {
-    node "Nginx\n(Host Port: 80 → Container: 80)" as Nginx
+skinparam storage {
+  BackgroundColor #FFF3E0
+  BorderColor     #E65100
+  FontColor       #BF360C
+}
+
+skinparam artifact {
+  BackgroundColor #F3E5F5
+  BorderColor     #6A1B9A
+  FontColor       #4A148C
+}
+
+skinparam ArrowColor     #37474F
+skinparam ArrowThickness 1.6
+
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+  FontSize        10
+}
+
+artifact "docker-compose.yml\n(Orchestration)" as YML #F3E5F5
+
+package "🐳  Docker Host" #F5F5F5 {
+
+  package "Frontend Container\nrecipevault-frontend" #E3F2FD {
+    node "Nginx 1.25\nPort: 0.0.0.0:80 → 80/tcp\n[reverse proxy: /api → backend:5000]" as Nginx
   }
 
-  package "Backend Container\nrecipevault-api" {
-    node "Node.js / Express\n(Host Port: 5001 → Container: 5000)" as API
+  package "Backend Container\nrecipevault-api" #FFF3E0 {
+    node "Node.js 18 / Express 4\nPort: 0.0.0.0:5001 → 5000/tcp\n[depends_on: mongo (healthy)]" as API
   }
 
-  package "Database Container\nrecipevault-mongo" {
-    database "MongoDB 6\n(Host Port: 27017 → Container: 27017)\n[healthcheck: mongosh ping]" as Mongo
+  package "Database Container\nrecipevault-mongo" #E8F5E9 {
+    database "MongoDB 6\nPort: 0.0.0.0:27017 → 27017/tcp\n[healthcheck: mongosh ping ✓]" as Mongo
   }
 
-  package "Named Volume" {
-    storage "mongo_data\n(/data/db)" as Vol
+  package "Persistent Storage" #FFF3E0 {
+    storage "Named Volume: mongo_data\nMounted at: /data/db\n(survives container restarts)" as Vol
   }
 
-  package "Docker Network" {
-    node "recipevault-network\n(default bridge)" as Net
+  package "Internal Network" #F3E5F5 {
+    node "recipevault-network\n(Docker bridge — DNS-based\nservice discovery)" as Net
   }
 
 }
 
-YML  --> Nginx : Build & Run\n(../frontend Dockerfile)
-YML  --> API   : Build & Run\n(../backend Dockerfile)
-YML  --> Mongo : Pull & Run\n(mongo:6)
-YML  --> Net   : Create Network
+YML  -down-> Nginx : Build & run\n(../frontend/Dockerfile)
+YML  -down-> API   : Build & run\n(../backend/Dockerfile)
+YML  -down-> Mongo : Pull & run\n(mongo:6 official image)
+YML  -right-> Net  : Create bridge network
 
-Nginx --> API   : HTTP reverse proxy\n/api → :5000\n(depends_on: backend)
-API   --> Mongo : MongoDB Wire Protocol\nMONGO_URI=mongodb://mongo:27017/recipevault\n(depends_on: mongo [healthy])
-Mongo --> Vol   : Persist data
+Nginx -right-> API   : HTTP reverse proxy\n/api/* → :5000\n(same-origin for browser)
+API   -right-> Mongo : MongoDB Wire Protocol\nMONGO_URI=mongodb://mongo:27017/recipevault
 
-Nginx --> Net : Connect
-API   --> Net : Connect
-Mongo --> Net : Connect
+Mongo -down-> Vol : Persist /data/db
+
+Nginx -down-> Net : Connect
+API   -down-> Net : Connect
+Mongo -down-> Net : Connect
+
+note right of Mongo
+  Health-check command:
+  mongosh --eval "db.adminCommand('ping')"
+  Interval: 10s · Timeout: 5s
+  Retries: 5 before "healthy"
+end note
+
+note right of Nginx
+  nginx.conf proxies all /api requests
+  to backend container via internal DNS.
+  Serves static HTML/CSS/JS on /.
+end note
 
 @enduml
 ```
@@ -359,42 +624,73 @@ Mongo --> Net : Connect
 
 ```plantuml
 @startuml RecipeVault_ComponentIndexes
-skinparam monochrome true
+
+title RecipeVault — Component Diagram with MongoDB Index Strategy\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
 skinparam componentStyle rectangle
 
-component "Recipe Router\n[GET / POST]\n[GET /:id  PUT /:id  DELETE /:id]" as Router
-component "Recipe Controller\n(recipeController.js)" as Ctrl
-component "Mongoose ODM\n(Recipe model)" as ODM
+skinparam component {
+  BorderThickness 2
+  FontSize        11
+}
+
+skinparam database {
+  BackgroundColor #E8F5E9
+  BorderColor     #2E7D32
+  FontColor       #1B5E20
+}
+
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+  FontSize        10
+}
+
+skinparam ArrowColor     #37474F
+skinparam ArrowThickness 1.6
+
+component "Recipe Router\n[GET /api/recipes]\n[POST /api/recipes]\n[GET /api/recipes/:id]\n[PUT /api/recipes/:id]\n[DELETE /api/recipes/:id]" as Router #BBDEFB
+
+component "Recipe Controller\n(recipeController.js)\n─────────────────────\ngetRecipes()   · getRecipe()\ncreateRecipe() · updateRecipe()\ndeleteRecipe()" as Ctrl #FFE0B2
+
+component "Mongoose ODM\n(Recipe model — Recipe.js)\n─────────────────────\nSchema validation\nEnum enforcement\nType casting\nTimestamp auto-fields" as ODM #F3E5F5
 
 database "MongoDB — recipevault database" {
 
-  component "recipes Collection" as Col
+  component "recipes\nCollection" as Col #C8E6C9
+
+  component "🔍  Text Index\n{ name:'text' (weight:10),\n  ingredients:'text' (weight:5),\n  description:'text' (weight:1) }\n→ $text queries & $regex search\n→ Relevance-ranked results" as TI #A5D6A7
+
+  component "🗂️  Category Index\n{ category: 1 }\n→ O(log n) category filter\n→ Supports ?category= param" as CI #A5D6A7
+
+  component "📅  Timestamp Index\n{ createdAt: -1 }\n→ O(log n) date-range sort\n→ Newest/oldest ordering" as DTI #A5D6A7
 
   note right of Col
-    Document Fields:
-    ─────────────────────────
-    _id          : ObjectId (PK)
-    name         : String (req, max 120)
-    category     : String (enum 6 values)
-    description  : String (max 500)
-    prepTime     : Number (min 0)
-    cookTime     : Number (min 0)
-    servings     : Number (min 1)
-    difficulty   : String (Easy|Medium|Hard)
-    ingredients  : String (newline-separated)
-    instructions : String (newline-separated)
-    createdAt    : Date (auto)
-    updatedAt    : Date (auto)
+    Document Fields
+    ─────────────────────────────
+    _id          : ObjectId  (PK, auto)
+    name         : String    (req, max 120)
+    category     : String    (enum, 6 values)
+    description  : String    (max 500)
+    prepTime     : Number    (min 0)
+    cookTime     : Number    (min 0)
+    servings     : Number    (min 1)
+    difficulty   : String    (enum: Easy|Medium|Hard)
+    ingredients  : String    (newline-separated)
+    instructions : String    (newline-separated)
+    createdAt    : Date      (auto)
+    updatedAt    : Date      (auto)
   end note
 
-  component "Text Index\n{ name:10, ingredients:5, description:1 }\n→ $text / $regex search queries" as TI
-  component "Category Index\n{ category: 1 }\n→ ?category= filter" as CI
-  component "Timestamp Index\n{ createdAt: -1 }\n→ sort: newest / oldest" as DTI
 }
 
-Router --> Ctrl  : dispatch CRUD action
-Ctrl   --> ODM   : Recipe.find(query)\nRecipe.create(data)\nRecipe.findByIdAndUpdate()\nRecipe.findByIdAndDelete()
-ODM    --> Col   : MongoDB Wire Protocol
+Router -down-> Ctrl  : Dispatch CRUD action
+Ctrl   -down-> ODM   : Recipe.find(query)\nRecipe.create(data)\nRecipe.findByIdAndUpdate()\nRecipe.findByIdAndDelete()
+ODM    -down-> Col   : MongoDB Wire Protocol
 
 Col --> TI  : accelerates text search
 Col --> CI  : accelerates category filter
@@ -480,41 +776,54 @@ RecipeSchema.index(
 
 ```plantuml
 @startuml RecipeVault_DataModel
-skinparam monochrome true
 
-class "Recipe Document" as Recipe <<MongoDB Document>> {
-  + _id          : ObjectId  <<PK, auto>>
-  + name         : String    <<required, max:120>>
-  + category     : String    <<enum: 6 values>>
-  + description  : String    <<optional, max:500>>
-  + prepTime     : Number    <<min:0, default:0>>
-  + cookTime     : Number    <<min:0, default:0>>
-  + servings     : Number    <<min:1, default:1>>
-  + difficulty   : String    <<enum: Easy|Medium|Hard>>
-  + ingredients  : String    <<newline-separated list>>
-  + instructions : String    <<newline-separated steps>>
-  + createdAt    : Date      <<auto (timestamps)>>
-  + updatedAt    : Date      <<auto (timestamps)>>
+title RecipeVault — NoSQL Document Data Model\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+
+skinparam class {
+  BackgroundColor     #E3F2FD
+  BorderColor         #1565C0
+  FontColor           #0D47A1
+  HeaderBackgroundColor #1565C0
+  HeaderFontColor     #FFFFFF
+  HeaderFontStyle     bold
+  BorderThickness     2
+  FontSize            11
 }
 
-note right of Recipe
-  NoSQL Design Notes:
-  ─────────────────────────────────────
-  • Single-collection design — no JOINs required.
-  • ingredients & instructions stored as plain
-    text strings (one item per line), giving
-    natural textarea ↔ DB round-trip with
-    zero serialisation overhead.
-  • Compound text index: name(×10),
-    ingredients(×5), description(×1)
-    enables weighted full-text search.
-  • category enum enforced by Mongoose ODM
-    (not a foreign key to a separate table).
-  • All recipe data fetched in a single
-    db.recipes.findOne() call — O(1) by _id.
-end note
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+  FontSize        10
+}
 
-class "Category Values" as Cat <<Enum>> {
+skinparam ArrowColor     #37474F
+skinparam ArrowThickness 1.6
+
+class "Recipe Document" as Recipe <<MongoDB Document>> {
+  + _id          : ObjectId  <<PK · auto-generated>>
+  ──────────────────────────────────────
+  + name         : String    <<required · max: 120>>
+  + category     : String    <<enum: 6 values>>
+  + description  : String    <<optional · max: 500>>
+  ──────────────────────────────────────
+  + prepTime     : Number    <<min: 0 · default: 0>>
+  + cookTime     : Number    <<min: 0 · default: 0>>
+  + servings     : Number    <<min: 1 · default: 1>>
+  + difficulty   : String    <<enum: Easy|Medium|Hard>>
+  ──────────────────────────────────────
+  + ingredients  : String    <<newline-separated list>>
+  + instructions : String    <<newline-separated steps>>
+  ──────────────────────────────────────
+  + createdAt    : Date      <<auto · timestamps: true>>
+  + updatedAt    : Date      <<auto · timestamps: true>>
+}
+
+class "Category Values" as Cat <<Mongoose Enum>> {
   Breakfast
   Lunch
   Dinner
@@ -523,7 +832,7 @@ class "Category Values" as Cat <<Enum>> {
   Drink
 }
 
-class "Difficulty Values" as Diff <<Enum>> {
+class "Difficulty Values" as Diff <<Mongoose Enum>> {
   Easy
   Medium
   Hard
@@ -531,6 +840,35 @@ class "Difficulty Values" as Diff <<Enum>> {
 
 Recipe "category" --> Cat  : constrained by
 Recipe "difficulty" --> Diff : constrained by
+
+note right of Recipe
+  NoSQL Design Decisions
+  ─────────────────────────────────────
+  ✦ Single-collection design — no JOINs required.
+
+  ✦ ingredients & instructions stored as plain
+    text strings (one item per line), enabling
+    direct textarea ↔ DB round-trip with
+    zero serialisation overhead.
+
+  ✦ Compound text index:
+      name        weight × 10
+      ingredients weight × 5
+      description weight × 1
+    → Weighted full-text search built-in.
+
+  ✦ category enum enforced by Mongoose ODM
+    (not a foreign key to a separate table).
+
+  ✦ Full recipe fetched in a single
+    db.recipes.findOne() — O(1) by _id.
+end note
+
+note bottom of Cat
+  Validated server-side by
+  sanitiseRecipeBody() before
+  any Mongoose or DB call
+end note
 
 @enduml
 ```
@@ -543,83 +881,111 @@ Recipe "difficulty" --> Diff : constrained by
 
 ```plantuml
 @startuml RecipeVault_ERD_NoSQL
-skinparam monochrome true
+
+title RecipeVault — Entity Relationship Diagram (NoSQL Adapted)\nEmbedding vs. Referencing Design Patterns\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+
 skinparam class {
-  FontSize 12
-}
-skinparam note {
-  FontSize 11
+  BackgroundColor       #E3F2FD
+  BorderColor           #1565C0
+  FontColor             #0D47A1
+  HeaderBackgroundColor #1565C0
+  HeaderFontColor       #FFFFFF
+  HeaderFontStyle       bold
+  BorderThickness       2
+  FontSize              11
 }
 
+skinparam class<<Embedded Sub-Document>> {
+  BackgroundColor       #E8F5E9
+  BorderColor           #2E7D32
+  HeaderBackgroundColor #2E7D32
+  HeaderFontColor       #FFFFFF
+}
+
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+  FontSize        10
+}
+
+skinparam ArrowColor     #37474F
+skinparam ArrowThickness 1.6
+
 class "users\nCollection" as Users <<MongoDB Document>> {
-  + _id         : ObjectId   <<PK, auto>>
-  + username    : String     <<required, unique>>
-  + email       : String     <<required, unique>>
-  + passwordHash: String     <<bcrypt>>
-  + createdAt   : Date       <<auto>>
+  + _id          : ObjectId   <<PK · auto>>
+  ─────────────────────────────
+  + username     : String     <<required · unique>>
+  + email        : String     <<required · unique>>
+  + passwordHash : String     <<bcrypt hash>>
+  + createdAt    : Date       <<auto>>
 }
 
 class "categories\nCollection" as Categories <<MongoDB Document>> {
-  + _id         : ObjectId   <<PK, auto>>
-  + name        : String     <<required, unique>>
-  + description : String     <<optional>>
-  + slug        : String     <<url-safe, unique>>
+  + _id          : ObjectId   <<PK · auto>>
+  ─────────────────────────────
+  + name         : String     <<required · unique>>
+  + description  : String     <<optional>>
+  + slug         : String     <<url-safe · unique>>
 }
 
 class "recipes\nCollection" as Recipes <<MongoDB Document>> {
-  + _id         : ObjectId   <<PK, auto>>
-  -- REFERENCED FIELDS --
-  + userId      : ObjectId   <<ref: users._id>>
-  + categoryId  : ObjectId   <<ref: categories._id>>
-  -- CORE FIELDS --
-  + name        : String     <<required, max:120>>
-  + description : String     <<optional>>
-  + prepTime    : Number
-  + cookTime    : Number
-  + servings    : Number
-  + difficulty  : String     <<enum>>
-  -- EMBEDDED SUB-DOCUMENTS --
-  + ingredients : Ingredient[]  <<embedded array>>
-  + instructions: Step[]        <<embedded array>>
-  + createdAt   : Date       <<auto>>
-  + updatedAt   : Date       <<auto>>
+  + _id          : ObjectId   <<PK · auto>>
+  ══ REFERENCED FIELDS ══════
+  + userId       : ObjectId   <<ref → users._id>>
+  + categoryId   : ObjectId   <<ref → categories._id>>
+  ══ CORE FIELDS ═════════════
+  + name         : String     <<required · max: 120>>
+  + description  : String     <<optional>>
+  + prepTime     : Number
+  + cookTime     : Number
+  + servings     : Number
+  + difficulty   : String     <<enum: Easy|Medium|Hard>>
+  ══ EMBEDDED SUB-DOCS ═══════
+  + ingredients  : Ingredient[]  <<embedded array>>
+  + instructions : Step[]        <<embedded array>>
+  + createdAt    : Date       <<auto>>
+  + updatedAt    : Date       <<auto>>
 }
 
 class "Ingredient\n(Embedded)" as Ingredient <<Embedded Sub-Document>> {
-  + name     : String   <<required>>
-  + quantity : String
-  + unit     : String
+  + name         : String   <<required>>
+  + quantity     : String
+  + unit         : String
 }
 
 class "Step\n(Embedded)" as Step <<Embedded Sub-Document>> {
-  + order       : Number   <<required>>
-  + description : String   <<required>>
+  + order        : Number   <<required>>
+  + description  : String   <<required>>
 }
 
 ' ─── REFERENCING relationships ───
-Users      "1" o-- "0..*" Recipes     : references\n(userId → users._id)
-Categories "1" o-- "0..*" Recipes     : references\n(categoryId → categories._id)
+Users      "1" o-down- "0..*" Recipes     : references\n(userId → users._id)
+Categories "1" o-down- "0..*" Recipes     : references\n(categoryId → categories._id)
 
 ' ─── EMBEDDING relationships ───
-Recipes "1" *-- "1..*" Ingredient  : embeds\n(ingredients array)
-Recipes "1" *-- "1..*" Step        : embeds\n(instructions array)
+Recipes "1" *-right- "1..*" Ingredient  : embeds\n(ingredients[ ])
+Recipes "1" *-down-  "1..*" Step        : embeds\n(instructions[ ])
 
 note bottom of Recipes
-  NoSQL Design Decisions:
-  ─────────────────────────────────────
-  REFERENCING — userId & categoryId:
+  NoSQL Design Decisions
+  ─────────────────────────────────────────
+  REFERENCING — userId & categoryId
     Users and Categories are independent
     entities managed in their own collections.
     Recipes store only an ObjectId reference.
     → Avoids data duplication across recipes.
-    → Category name changes require only one
+    → A category name change requires only one
       update in the categories collection.
 
-  EMBEDDING — ingredients & instructions:
+  EMBEDDING — ingredients & instructions
     Ingredients and steps are owned exclusively
     by a single recipe and are always read
-    together with it. Embedding them eliminates
-    a separate collection lookup and delivers
+    together with it. Embedding eliminates a
+    separate collection lookup and delivers
     the full recipe in one db.recipes.findOne().
     → Atomic read/write of the entire recipe.
     → No JOIN-equivalent ($lookup) needed.
@@ -847,7 +1213,105 @@ For collections exceeding ~10,000 documents, sorting should be moved to the data
 
 ---
 
-## 4. Presentation Outline
+### 3.5 API Reference
+
+All endpoints are prefixed with `/api/recipes`. The base URL for local development is `http://localhost:5001`.
+
+#### Endpoints
+
+| Method | Path | Description | Success Code |
+|---|---|---|---|
+| `GET` | `/api/recipes` | List all recipes (supports query params) | `200 OK` |
+| `GET` | `/api/recipes/:id` | Get a single recipe by MongoDB ObjectId | `200 OK` |
+| `POST` | `/api/recipes` | Create a new recipe | `201 Created` |
+| `PUT` | `/api/recipes/:id` | Update an existing recipe by ObjectId | `200 OK` |
+| `DELETE` | `/api/recipes/:id` | Delete a recipe by ObjectId | `200 OK` |
+| `GET` | `/health` | Health check — returns server status | `200 OK` |
+
+#### Query Parameters for `GET /api/recipes`
+
+| Parameter | Type | Description | Example |
+|---|---|---|---|
+| `search` | `string` | Case-insensitive text search across `name`, `description`, `ingredients` | `?search=egg` |
+| `category` | `string` | Filter by category enum value | `?category=Breakfast` |
+| `sort` | `string` | Sort order: `newest` \| `oldest` \| `az` \| `time` | `?sort=newest` |
+
+#### Request Body for `POST` and `PUT`
+
+```json
+{
+  "name":         "Shakshuka",
+  "category":     "Breakfast",
+  "description":  "Poached eggs in spiced tomato sauce.",
+  "prepTime":     10,
+  "cookTime":     25,
+  "servings":     4,
+  "difficulty":   "Easy",
+  "ingredients":  "2 tbsp olive oil\n1 onion\n4 eggs",
+  "instructions": "Heat oil\nSauté onion\nAdd tomatoes\nCook eggs"
+}
+```
+
+#### Error Response Format
+
+```json
+{
+  "error": "Human-readable error message",
+  "details": "Optional validation detail"
+}
+```
+
+| HTTP Status | Condition |
+|---|---|
+| `400 Bad Request` | Invalid ObjectId format, Mongoose `ValidationError` |
+| `404 Not Found` | Recipe not found for given `id` |
+| `429 Too Many Requests` | Rate limit exceeded (100 req / 15 min) |
+| `500 Internal Server Error` | Unexpected server-side error |
+
+---
+
+### 3.6 File & Directory Structure
+
+```
+ADB-Project/
+├── DOCUMENTATION.md          ← This file — comprehensive project documentation
+├── PRESENTATION.md           ← Slide-by-slide presentation deck
+├── UML/                      ← Rendered diagram images (PNG)
+│   ├── Architecture.png
+│   ├── AuthenticationSequence.png
+│   ├── ComponentWithIndexes.png
+│   ├── Data Model.png
+│   ├── Deployment.png
+│   ├── Sequence.png
+│   └── UseCase.png
+└── Recipes App/
+    └── Recipes App-main/
+        ├── backend/
+        │   ├── Dockerfile             ← Node.js 18 container image
+        │   ├── server.js              ← Express app entry point
+        │   ├── package.json           ← Node.js dependencies
+        │   ├── seed.js                ← Database seeder (sample Egyptian recipes)
+        │   ├── config/
+        │   │   └── db.js              ← MongoDB connection setup
+        │   ├── controllers/
+        │   │   └── recipeController.js ← CRUD handlers + search/filter logic
+        │   ├── middleware/
+        │   │   └── errorHandler.js    ← Centralised error handling
+        │   ├── models/
+        │   │   └── Recipe.js          ← Mongoose schema, validation, index registration
+        │   └── routes/
+        │       └── recipes.js         ← Express router (HTTP verb mapping)
+        ├── frontend/
+        │   ├── index.html             ← Single-page application shell
+        │   ├── style.css              ← Global styles + responsive layout
+        │   ├── app.js                 ← Frontend SPA logic (state, DOM, API calls)
+        │   └── nginx.conf             ← Nginx config (static serve + /api proxy)
+        └── docker/
+            ├── Dockerfile             ← Nginx frontend container image
+            └── docker-compose.yml     ← Three-service orchestration file
+```
+
+---
 
 > **Audience:** Course instructor and peers  
 > **Duration:** 15–20 minutes + Q&A  
