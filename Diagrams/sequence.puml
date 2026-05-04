@@ -1,0 +1,96 @@
+@startuml
+' ============================================================
+' RecipeVault — Sequence Diagram: Create Recipe Flow
+' POST /api/recipes
+' ============================================================
+
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceParticipant underline
+skinparam backgroundColor #FAFAFA
+skinparam sequence {
+  LifeLineBorderColor #7A7568
+  LifeLineBackgroundColor #F7F4EE
+  ParticipantBorderColor #7A7568
+  ParticipantBackgroundColor #F7F4EE
+  ArrowColor #444444
+  NoteBorderColor #B0A898
+  NoteBackgroundColor #FFF8EC
+}
+
+title RecipeVault — Create Recipe Sequence
+
+actor "User" as User
+participant "Frontend\n(app.js)" as Frontend
+participant "Nginx\n(reverse proxy)" as Nginx
+participant "Express Server\n(server.js)" as Express
+participant "recipeController\n(createRecipe)" as Controller
+participant "Recipe Model\n(Mongoose)" as Model
+database "MongoDB\n(recipes)" as DB
+
+== User Submits New Recipe Form ==
+
+User -> Frontend : Click "Save" in Add Recipe modal\n(openAddModal → saveRecipe())
+activate Frontend
+
+Frontend -> Frontend : Validate name & category\n(client-side check)
+
+Frontend -> Nginx : POST /api/recipes\nContent-Type: application/json\n{ name, category, description,\n  prepTime, cookTime, servings,\n  difficulty, ingredients, instructions }
+activate Nginx
+
+Nginx -> Express : Proxy → POST http://backend:5000/api/recipes
+activate Express
+
+Express -> Express : Rate limiter check\n(apiLimiter middleware)
+Express -> Express : CORS check\n(cors middleware)
+Express -> Express : Parse JSON body\n(express.json())
+
+Express -> Controller : router.post('/') → ctrl.createRecipe(req, res, next)
+activate Controller
+
+Controller -> Controller : sanitiseRecipeBody(req.body)\n(whitelist & type-cast fields)
+
+Controller -> Model : Recipe.create(data)\n(db.recipes.insertOne)
+activate Model
+
+Model -> Model : Mongoose schema validation\n(required fields, enums, maxlength)
+
+Model -> DB : insertOne({ name, category,\n  description, prepTime, cookTime,\n  servings, difficulty, ingredients,\n  instructions, createdAt, updatedAt })
+activate DB
+
+DB --> Model : Saved document\n(with _id, timestamps)
+deactivate DB
+
+Model --> Controller : recipe document
+deactivate Model
+
+Controller --> Express : res.status(201).json(recipe)
+deactivate Controller
+
+Express --> Nginx : HTTP 201 Created\n{ _id, name, category, … }
+deactivate Express
+
+Nginx --> Frontend : HTTP 201 Created\n(JSON recipe object)
+deactivate Nginx
+
+Frontend -> Frontend : recipes.unshift(created)\ncloseModal('form-modal')\nrenderGrid()
+Frontend --> User : Toast: "Recipe added to collection!"\nNew card appears in grid
+deactivate Frontend
+
+== Error Path ==
+
+alt Validation error (e.g. missing name)
+  Frontend --> User : Toast: "Please enter a recipe name."
+else Mongoose validation failure
+  Model --> Controller : ValidationError
+  Controller --> Express : next(err)
+  Express --> Frontend : HTTP 400 { error: message }
+  Frontend --> User : Toast: error message
+else Server / DB error
+  DB --> Model : Error
+  Model --> Controller : Error
+  Controller --> Express : next(err)
+  Express --> Frontend : HTTP 500 { error: message }
+  Frontend --> User : Toast: "Failed to save recipe."
+end
+
+@enduml
