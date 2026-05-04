@@ -1,0 +1,74 @@
+@startuml RecipeVault_ComponentIndexes
+
+title RecipeVault — Component Diagram with MongoDB Index Strategy\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam componentStyle rectangle
+
+skinparam component {
+  BorderThickness 2
+  FontSize        11
+}
+
+skinparam database {
+  BackgroundColor #E8F5E9
+  BorderColor     #2E7D32
+  FontColor       #1B5E20
+}
+
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+  FontSize        10
+}
+
+skinparam ArrowColor     #37474F
+skinparam ArrowThickness 1.6
+
+component "Recipe Router\n[GET /api/recipes]\n[POST /api/recipes]\n[GET /api/recipes/:id]\n[PUT /api/recipes/:id]\n[DELETE /api/recipes/:id]" as Router #BBDEFB
+
+component "Recipe Controller\n(recipeController.js)\n─────────────────────\ngetRecipes()   · getRecipe()\ncreateRecipe() · updateRecipe()\ndeleteRecipe()" as Ctrl #FFE0B2
+
+component "Mongoose ODM\n(Recipe model — Recipe.js)\n─────────────────────\nSchema validation\nEnum enforcement\nType casting\nTimestamp auto-fields" as ODM #F3E5F5
+
+database "MongoDB — recipevault database" {
+
+  component "recipes\nCollection" as Col #C8E6C9
+
+  component "🔍  Text Index\n{ name:'text' (weight:10),\n  ingredients:'text' (weight:5),\n  description:'text' (weight:1) }\n→ $text queries & $regex search\n→ Relevance-ranked results" as TI #A5D6A7
+
+  component "🗂️  Category Index\n{ category: 1 }\n→ O(log n) category filter\n→ Supports ?category= param" as CI #A5D6A7
+
+  component "📅  Timestamp Index\n{ createdAt: -1 }\n→ O(log n) date-range sort\n→ Newest/oldest ordering" as DTI #A5D6A7
+
+  note right of Col
+    Document Fields
+    ─────────────────────────────
+    _id          : ObjectId  (PK, auto)
+    name         : String    (req, max 120)
+    category     : String    (enum, 6 values)
+    description  : String    (max 500)
+    prepTime     : Number    (min 0)
+    cookTime     : Number    (min 0)
+    servings     : Number    (min 1)
+    difficulty   : String    (enum: Easy|Medium|Hard)
+    ingredients  : String    (newline-separated)
+    instructions : String    (newline-separated)
+    createdAt    : Date      (auto)
+    updatedAt    : Date      (auto)
+  end note
+
+}
+
+Router -down-> Ctrl  : Dispatch CRUD action
+Ctrl   -down-> ODM   : Recipe.find(query)\nRecipe.create(data)\nRecipe.findByIdAndUpdate()\nRecipe.findByIdAndDelete()
+ODM    -down-> Col   : MongoDB Wire Protocol
+
+Col --> TI  : accelerates text search
+Col --> CI  : accelerates category filter
+Col --> DTI : accelerates date sort
+
+@enduml

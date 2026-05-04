@@ -1,0 +1,104 @@
+@startuml RecipeVault_Deployment
+
+title RecipeVault — Docker Deployment Architecture\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam componentStyle rectangle
+
+skinparam package {
+  FontStyle       bold
+  FontSize        12
+  BorderThickness 2
+}
+
+skinparam node {
+  BackgroundColor #E3F2FD
+  BorderColor     #1565C0
+  FontColor       #0D47A1
+  BorderThickness 2
+}
+
+skinparam database {
+  BackgroundColor #E8F5E9
+  BorderColor     #2E7D32
+  FontColor       #1B5E20
+}
+
+skinparam storage {
+  BackgroundColor #FFF3E0
+  BorderColor     #E65100
+  FontColor       #BF360C
+}
+
+skinparam artifact {
+  BackgroundColor #F3E5F5
+  BorderColor     #6A1B9A
+  FontColor       #4A148C
+}
+
+skinparam ArrowColor     #37474F
+skinparam ArrowThickness 1.6
+
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+  FontSize        10
+}
+
+artifact "docker-compose.yml\n(Orchestration)" as YML #F3E5F5
+
+package "🐳  Docker Host" #F5F5F5 {
+
+  package "Frontend Container\nrecipevault-frontend" #E3F2FD {
+    node "Nginx 1.25\nPort: 0.0.0.0:80 → 80/tcp\n[reverse proxy: /api → backend:5000]" as Nginx
+  }
+
+  package "Backend Container\nrecipevault-api" #FFF3E0 {
+    node "Node.js 18 / Express 4\nPort: 0.0.0.0:5001 → 5000/tcp\n[depends_on: mongo (healthy)]" as API
+  }
+
+  package "Database Container\nrecipevault-mongo" #E8F5E9 {
+    database "MongoDB 6\nPort: 0.0.0.0:27017 → 27017/tcp\n[healthcheck: mongosh ping ✓]" as Mongo
+  }
+
+  package "Persistent Storage" #FFF3E0 {
+    storage "Named Volume: mongo_data\nMounted at: /data/db\n(survives container restarts)" as Vol
+  }
+
+  package "Internal Network" #F3E5F5 {
+    node "recipevault-network\n(Docker bridge — DNS-based\nservice discovery)" as Net
+  }
+
+}
+
+YML  -down-> Nginx : Build & run\n(../frontend/Dockerfile)
+YML  -down-> API   : Build & run\n(../backend/Dockerfile)
+YML  -down-> Mongo : Pull & run\n(mongo:6 official image)
+YML  -right-> Net  : Create bridge network
+
+Nginx -right-> API   : HTTP reverse proxy\n/api/* → :5000\n(same-origin for browser)
+API   -right-> Mongo : MongoDB Wire Protocol\nMONGO_URI=mongodb://mongo:27017/recipevault
+
+Mongo -down-> Vol : Persist /data/db
+
+Nginx -down-> Net : Connect
+API   -down-> Net : Connect
+Mongo -down-> Net : Connect
+
+note right of Mongo
+  Health-check command:
+  mongosh --eval "db.adminCommand('ping')"
+  Interval: 10s · Timeout: 5s
+  Retries: 5 before "healthy"
+end note
+
+note right of Nginx
+  nginx.conf proxies all /api requests
+  to backend container via internal DNS.
+  Serves static HTML/CSS/JS on /.
+end note
+
+@enduml

@@ -1,0 +1,96 @@
+@startuml RecipeVault_DataModel
+
+title RecipeVault — NoSQL Document Data Model\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+
+skinparam class {
+  BackgroundColor     #E3F2FD
+  BorderColor         #1565C0
+  FontColor           #0D47A1
+  HeaderBackgroundColor #1565C0
+  HeaderFontColor     #FFFFFF
+  HeaderFontStyle     bold
+  BorderThickness     2
+  FontSize            11
+}
+
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+  FontSize        10
+}
+
+skinparam ArrowColor     #37474F
+skinparam ArrowThickness 1.6
+
+class "Recipe Document" as Recipe <<MongoDB Document>> {
+  + _id          : ObjectId  <<PK · auto-generated>>
+  ──────────────────────────────────────
+  + name         : String    <<required · max: 120>>
+  + category     : String    <<enum: 6 values>>
+  + description  : String    <<optional · max: 500>>
+  ──────────────────────────────────────
+  + prepTime     : Number    <<min: 0 · default: 0>>
+  + cookTime     : Number    <<min: 0 · default: 0>>
+  + servings     : Number    <<min: 1 · default: 1>>
+  + difficulty   : String    <<enum: Easy|Medium|Hard>>
+  ──────────────────────────────────────
+  + ingredients  : String    <<newline-separated list>>
+  + instructions : String    <<newline-separated steps>>
+  ──────────────────────────────────────
+  + createdAt    : Date      <<auto · timestamps: true>>
+  + updatedAt    : Date      <<auto · timestamps: true>>
+}
+
+class "Category Values" as Cat <<Mongoose Enum>> {
+  Breakfast
+  Lunch
+  Dinner
+  Dessert
+  Snack
+  Drink
+}
+
+class "Difficulty Values" as Diff <<Mongoose Enum>> {
+  Easy
+  Medium
+  Hard
+}
+
+Recipe "category" --> Cat  : constrained by
+Recipe "difficulty" --> Diff : constrained by
+
+note right of Recipe
+  NoSQL Design Decisions
+  ─────────────────────────────────────
+  ✦ Single-collection design — no JOINs required.
+
+  ✦ ingredients & instructions stored as plain
+    text strings (one item per line), enabling
+    direct textarea ↔ DB round-trip with
+    zero serialisation overhead.
+
+  ✦ Compound text index:
+      name        weight × 10
+      ingredients weight × 5
+      description weight × 1
+    → Weighted full-text search built-in.
+
+  ✦ category enum enforced by Mongoose ODM
+    (not a foreign key to a separate table).
+
+  ✦ Full recipe fetched in a single
+    db.recipes.findOne() — O(1) by _id.
+end note
+
+note bottom of Cat
+  Validated server-side by
+  sanitiseRecipeBody() before
+  any Mongoose or DB call
+end note
+
+@enduml
