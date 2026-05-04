@@ -1,0 +1,74 @@
+@startuml
+' ============================================================
+' RecipeVault — Use Case Diagram
+' ============================================================
+
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #F7F4EE
+  BorderColor #7A7568
+  ArrowColor #444444
+  FontSize 12
+}
+skinparam actor {
+  BorderColor #7A7568
+  BackgroundColor #E8E4DA
+  FontSize 12
+}
+skinparam rectangle {
+  BorderColor #B0A898
+  BackgroundColor #FAFAF7
+  FontSize 13
+  FontStyle bold
+}
+skinparam title {
+  FontSize 16
+  FontStyle bold
+}
+
+title RecipeVault — Use Case Diagram
+
+actor "User" as User
+
+rectangle "RecipeVault System" {
+
+  ' ── Browse & Search ──────────────────────────────────────
+  usecase "View All Recipes\nGET /api/recipes" as UC_ViewAll
+  usecase "Search Recipes\n(?search=<term>)" as UC_Search
+  usecase "Filter by Category\n(?category=<cat>)" as UC_Filter
+  usecase "Sort Recipes\n(newest / oldest / A-Z / time)" as UC_Sort
+  usecase "View Recipe Details\nGET /api/recipes/:id" as UC_ViewOne
+
+  ' ── CRUD ─────────────────────────────────────────────────
+  usecase "Add New Recipe\nPOST /api/recipes" as UC_Create
+  usecase "Edit Recipe\nPUT /api/recipes/:id" as UC_Edit
+  usecase "Delete Recipe\nDELETE /api/recipes/:id" as UC_Delete
+
+  ' ── System / Infra ───────────────────────────────────────
+  usecase "Health Check\nGET /health" as UC_Health
+
+}
+
+' ── Relationships ─────────────────────────────────────────
+User --> UC_ViewAll
+User --> UC_Search
+User --> UC_Filter
+User --> UC_Sort
+User --> UC_ViewOne
+User --> UC_Create
+User --> UC_Edit
+User --> UC_Delete
+
+' ── Include relationships ─────────────────────────────────
+UC_Search ..> UC_ViewAll : <<include>>
+UC_Filter ..> UC_ViewAll : <<include>>
+UC_Sort   ..> UC_ViewAll : <<include>>
+
+UC_Edit   ..> UC_ViewOne : <<include>>
+UC_Delete ..> UC_ViewOne : <<include>>
+
+' ── External system actor ─────────────────────────────────
+actor "Load Balancer /\nDocker Health Check" as Monitor
+Monitor --> UC_Health
+
+@enduml
