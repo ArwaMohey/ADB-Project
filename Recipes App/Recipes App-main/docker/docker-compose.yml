@@ -1,0 +1,48 @@
+services:
+  # ── Frontend — Nginx serving static files + reverse proxy ──
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/Dockerfile
+    container_name: recipevault-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ── Node.js / Express API ──────────────────────────────────
+  backend:
+    build:
+      context: ../backend
+    container_name: recipevault-api
+    ports:
+      - "${BACKEND_PORT:-5001}:5000"
+    env_file:
+      - ../.env
+    environment:
+      # Override MONGO_URI to use the Docker service name as host
+      MONGO_URI: mongodb://mongo:27017/recipevault
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── MongoDB ────────────────────────────────────────────────
+  mongo:
+    image: mongo:6
+    container_name: recipevault-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  # Named volume so recipe data persists across container restarts
+  mongo_data:
