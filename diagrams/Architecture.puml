@@ -1,0 +1,90 @@
+@startuml RecipeVault_Architecture
+
+title RecipeVault — System Architecture Overview\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam componentStyle rectangle
+
+skinparam package {
+  FontStyle       bold
+  FontSize        13
+  BorderThickness 2
+}
+
+skinparam component {
+  FontSize        11
+  BorderThickness 1.5
+}
+
+skinparam ArrowColor     #37474F
+skinparam ArrowThickness 1.6
+
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+  FontSize        10
+}
+
+package "🌐  Frontend  (Nginx · HTML · CSS · Vanilla JS)" #E3F2FD {
+  [Recipes Grid Page]         as PG  #BBDEFB
+  [Recipe Detail Modal]       as PD  #BBDEFB
+  [Create / Edit Form]        as PF  #BBDEFB
+  [Search · Filter · Sort Bar] as PS  #BBDEFB
+}
+
+package "🛡️  Security Layer" #FCE4EC {
+  [CORS Policy\n(allowedOrigins whitelist)]        as CORS  #F8BBD9
+  [Rate Limiter\n(100 req / 15 min per IP)]        as RL    #F8BBD9
+}
+
+package "⚙️  Backend  (Node.js 18 · Express 4)" #FFF3E0 {
+  [Recipe Router\n/api/recipes]                    as Router  #FFE0B2
+  [Recipe Controller\n(CRUD handlers)]             as Ctrl    #FFE0B2
+  [Input Sanitizer\n(sanitiseRecipeBody · escapeRegex)] as San #FFE0B2
+  [Mongoose ODM v7.x\n(Schema · Validation · Hooks)] as ODM  #FFE0B2
+  [Central Error Handler\n(errorHandler middleware)] as EH   #FFE0B2
+}
+
+package "🗄️  Data Layer  (MongoDB 6)" #E8F5E9 {
+  database "recipes\nCollection" as Col  #C8E6C9
+
+  [Text Index\nname(×10) · ingredients(×5) · description(×1)\n→ $text / $regex search] as TI  #A5D6A7
+  [Category Index\n{ category: 1 }\n→ filter by category enum]                          as CI  #A5D6A7
+  [Timestamp Index\n{ createdAt: -1 }\n→ newest / oldest sort]                          as DI  #A5D6A7
+}
+
+PG  -down-> CORS
+PD  -down-> CORS
+PF  -down-> CORS
+PS  -down-> CORS
+
+CORS -right-> RL    : Security headers applied
+RL   -down->  Router : All /api requests
+
+Router -down-> Ctrl  : Route dispatch
+Ctrl   -down-> San   : Validate & sanitise input
+San    -down-> ODM   : Clean data → Mongoose model
+ODM    -down-> Col   : find · create\nfindByIdAndUpdate · findByIdAndDelete
+
+Col --> TI
+Col --> CI
+Col --> DI
+
+Ctrl --> EH : next(err) on failure
+
+note right of EH
+  Converts Mongoose ValidationError
+  and CastError to safe HTTP responses.
+  Raw stack traces are never exposed.
+end note
+
+note bottom of TI
+  Weighted inverted index enables
+  relevance-ranked full-text search
+  without external search engine.
+end note
+
+@enduml

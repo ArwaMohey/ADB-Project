@@ -1,0 +1,86 @@
+@startuml RecipeVault_UseCaseDiagram
+
+title RecipeVault — Use Case Diagram\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+
+skinparam actor {
+  BackgroundColor #1565C0
+  BorderColor     #0D47A1
+  FontColor       #FFFFFF
+  FontStyle       bold
+}
+
+skinparam usecase {
+  BackgroundColor #E3F2FD
+  BorderColor     #1565C0
+  FontColor       #0D47A1
+  FontSize        12
+  BorderThickness 2
+}
+
+skinparam rectangle {
+  BackgroundColor #F5F5F5
+  BorderColor     #1565C0
+  BorderThickness 2
+  FontColor       #1565C0
+  FontStyle       bold
+}
+
+skinparam ArrowColor #1565C0
+skinparam ArrowThickness 1.5
+
+left to right direction
+
+actor "  User  " as User
+
+rectangle "RecipeVault — NoSQL Recipe Management System" {
+
+  package "Read Operations" #E8F5E9 {
+    usecase "View Recipes List"   as UC1
+    usecase "View Recipe Details" as UC2
+    usecase "Search Recipes"      as UC3
+    usecase "Filter by Category"  as UC4
+    usecase "Sort Recipes"        as UC5
+    usecase "View Statistics Bar" as UC6
+  }
+
+  package "Write Operations" #FFF3E0 {
+    usecase "Create New Recipe"   as UC7
+    usecase "Edit Recipe"         as UC8
+    usecase "Delete Recipe"       as UC9
+  }
+
+}
+
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+User --> UC6
+User --> UC7
+User --> UC8
+User --> UC9
+
+UC3 .> UC1 : <<extend>>
+UC4 .> UC1 : <<extend>>
+UC5 .> UC1 : <<extend>>
+UC8 .> UC2 : <<extend>>
+UC9 .> UC2 : <<extend>>
+
+note bottom of UC3
+  Real-time regex search
+  across name, description
+  and ingredients fields
+end note
+
+note bottom of UC7
+  All write operations trigger
+  Mongoose validation before
+  MongoDB write
+end note
+
+@enduml

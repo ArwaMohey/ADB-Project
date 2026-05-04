@@ -1,0 +1,105 @@
+@startuml RecipeVault_Sequence_Lifecycle
+
+title RecipeVault — Recipe Lifecycle Sequence Diagram\n(Create · Update · Delete)\nCSE323 Advanced Database Systems
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam sequenceMessageAlign center
+
+skinparam participant {
+  BackgroundColor #E3F2FD
+  BorderColor     #1565C0
+  FontColor       #0D47A1
+  FontStyle       bold
+}
+
+skinparam actor {
+  BackgroundColor #1565C0
+  BorderColor     #0D47A1
+  FontColor       #1565C0
+}
+
+skinparam sequence {
+  ArrowColor              #1565C0
+  ArrowThickness          1.8
+  LifeLineBorderColor     #1565C0
+  LifeLineBackgroundColor #E3F2FD
+  GroupBackgroundColor    #E8F5E9
+  GroupBorderColor        #2E7D32
+  GroupHeaderFontColor    #1B5E20
+  GroupFontStyle          bold
+  DividerBackgroundColor  #FFF9C4
+  DividerBorderColor      #F9A825
+}
+
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor     #F9A825
+  FontColor       #5D4037
+}
+
+actor       "User"                               as User
+participant "Frontend\n(HTML / JS)"              as FE  #E3F2FD
+participant "Security Layer\n(CORS + Rate Limit)" as SEC #FCE4EC
+participant "Backend\n(Node.js / Express)"       as BE  #FFF3E0
+participant "MongoDB"                            as DB  #E8F5E9
+
+== ➕  CREATE RECIPE ==
+
+User -> FE  : Fill form → click Save
+FE   -> SEC : POST /api/recipes
+SEC  -> SEC : Check rate limit\n(100 req / 15 min per IP)
+
+alt Rate limit exceeded
+  SEC --> FE : ⚠ HTTP 429 Too Many Requests
+end
+
+SEC  -> BE  : Forward valid request
+BE   -> BE  : sanitiseRecipeBody(body)\nvalidate enum fields
+
+BE   -> DB  : Recipe.create(data)\n≡ db.recipes.insertOne(data)
+DB  --> BE  : Saved document\n(_id, timestamps assigned)
+BE  --> SEC : HTTP 201 Created { recipe }
+SEC --> FE  : HTTP 201 Created
+FE  --> User : ✓ Toast "Recipe added"\nPrepend card to grid
+
+|||
+
+== ✏️  UPDATE RECIPE ==
+
+User -> FE  : Click Edit → modify fields → Save
+FE   -> SEC : PUT /api/recipes/:id\n{ updated fields }
+SEC  -> SEC : Check rate limit
+SEC  -> BE  : Forward valid request
+BE   -> BE  : sanitiseRecipeBody(body)\nwhitelist updatable fields
+
+BE   -> DB  : Recipe.findByIdAndUpdate(id, updates,\n{ new:true, runValidators:true })\n≡ db.recipes.updateOne({ _id },{ $set })
+DB  --> BE  : Updated document
+BE  --> SEC : HTTP 200 OK { recipe }
+SEC --> FE  : HTTP 200 OK
+FE  --> User : ✓ Toast "Recipe updated"\nCard refreshed in grid
+
+|||
+
+== 🗑️  DELETE RECIPE ==
+
+User -> FE  : Click Delete → confirm dialog
+FE   -> SEC : DELETE /api/recipes/:id
+SEC  -> SEC : Check rate limit
+SEC  -> BE  : Forward valid request
+
+BE   -> DB  : Recipe.findByIdAndDelete(id)\n≡ db.recipes.deleteOne({ _id })
+DB  --> BE  : Deleted document (confirmation)
+BE  --> SEC : HTTP 200 OK { message: "Recipe deleted" }
+SEC --> FE  : HTTP 200 OK
+FE  --> User : ✓ Toast "Recipe deleted"\nCard removed from grid
+
+note over SEC
+  All write operations pass through
+  the security layer regardless of
+  HTTP method. Rate limit is tracked
+  per IP across all /api routes.
+end note
+
+@enduml
