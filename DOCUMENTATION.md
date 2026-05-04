@@ -18,6 +18,7 @@
    - [2.5 Deployment Architecture](#25-deployment-architecture)
    - [2.6 Component Diagram with MongoDB Indexes](#26-component-diagram-with-mongodb-indexes)
    - [2.7 Data Model — NoSQL Document Schema](#27-data-model--nosql-document-schema)
+   - [2.8 Entity Relationship Diagram (ERD — NoSQL Adapted)](#28-entity-relationship-diagram-erd--nosql-adapted)
 3. [Documentation](#3-documentation)
    - [3.1 Project Objectives](#31-project-objectives)
    - [3.2 Design Decisions & Implementation Details](#32-design-decisions--implementation-details)
@@ -91,15 +92,11 @@ The Mongoose Object Document Mapper provides schema-level validation, enum enfor
 
 ```plantuml
 @startuml RecipeVault_UseCaseDiagram
+skinparam monochrome true
 left to right direction
 skinparam packageStyle rectangle
 skinparam usecase {
-  BackgroundColor White
-  BorderColor #333333
   FontSize 13
-}
-skinparam actor {
-  BorderColor #333333
 }
 
 actor User
@@ -145,9 +142,8 @@ UC9 .> UC2 : «extend»
 
 ```plantuml
 @startuml RecipeVault_Sequence_CreateView
+skinparam monochrome true
 skinparam sequenceMessageAlign center
-skinparam sequenceParticipantBorderColor #333333
-skinparam sequenceArrowColor #333333
 
 actor User
 participant "Frontend\n(HTML / JS)" as FE
@@ -183,9 +179,8 @@ FE   --> User : Recipe detail modal displayed
 
 ```plantuml
 @startuml RecipeVault_Sequence_Lifecycle
+skinparam monochrome true
 skinparam sequenceMessageAlign center
-skinparam sequenceParticipantBorderColor #333333
-skinparam sequenceArrowColor #333333
 
 actor User
 participant "Frontend\n(HTML / JS)"      as FE
@@ -243,17 +238,10 @@ FE   --> User : Toast "Recipe deleted" +\ncard removed from grid
 
 ```plantuml
 @startuml RecipeVault_Architecture
+skinparam monochrome true
 skinparam componentStyle rectangle
-skinparam component {
-  BackgroundColor White
-  BorderColor #333333
-}
 skinparam package {
-  BorderColor #555555
   FontStyle bold
-}
-skinparam arrow {
-  Color #333333
 }
 
 package "Frontend (Nginx + HTML / CSS / JS)" {
@@ -313,13 +301,9 @@ Ctrl --> EH : next(err)
 
 ```plantuml
 @startuml RecipeVault_Deployment
+skinparam monochrome true
 skinparam componentStyle rectangle
-skinparam node {
-  BackgroundColor White
-  BorderColor #333333
-}
 skinparam package {
-  BorderColor #555555
   FontStyle bold
 }
 
@@ -375,15 +359,8 @@ Mongo --> Net : Connect
 
 ```plantuml
 @startuml RecipeVault_ComponentIndexes
+skinparam monochrome true
 skinparam componentStyle rectangle
-skinparam component {
-  BackgroundColor White
-  BorderColor #333333
-}
-skinparam database {
-  BackgroundColor #FFF9E6
-  BorderColor #C8A000
-}
 
 component "Recipe Router\n[GET / POST]\n[GET /:id  PUT /:id  DELETE /:id]" as Router
 component "Recipe Controller\n(recipeController.js)" as Ctrl
@@ -503,11 +480,7 @@ RecipeSchema.index(
 
 ```plantuml
 @startuml RecipeVault_DataModel
-skinparam class {
-  BackgroundColor White
-  BorderColor #333333
-  HeaderBackgroundColor #F5F0E8
-}
+skinparam monochrome true
 
 class "Recipe Document" as Recipe <<MongoDB Document>> {
   + _id          : ObjectId  <<PK, auto>>
@@ -558,6 +531,99 @@ class "Difficulty Values" as Diff <<Enum>> {
 
 Recipe "category" --> Cat  : constrained by
 Recipe "difficulty" --> Diff : constrained by
+
+@enduml
+```
+
+---
+
+### 2.8 Entity Relationship Diagram (ERD — NoSQL Adapted)
+
+**Description:** Illustrates how three logically related MongoDB collections — `users`, `categories`, and `recipes` — are modelled using the two canonical NoSQL patterns: **document embedding** (for tightly owned sub-data) and **document referencing** (for independently managed entities). This diagram demonstrates deliberate NoSQL design decisions rather than a direct translation of a relational schema.
+
+```plantuml
+@startuml RecipeVault_ERD_NoSQL
+skinparam monochrome true
+skinparam class {
+  FontSize 12
+}
+skinparam note {
+  FontSize 11
+}
+
+class "users\nCollection" as Users <<MongoDB Document>> {
+  + _id         : ObjectId   <<PK, auto>>
+  + username    : String     <<required, unique>>
+  + email       : String     <<required, unique>>
+  + passwordHash: String     <<bcrypt>>
+  + createdAt   : Date       <<auto>>
+}
+
+class "categories\nCollection" as Categories <<MongoDB Document>> {
+  + _id         : ObjectId   <<PK, auto>>
+  + name        : String     <<required, unique>>
+  + description : String     <<optional>>
+  + slug        : String     <<url-safe, unique>>
+}
+
+class "recipes\nCollection" as Recipes <<MongoDB Document>> {
+  + _id         : ObjectId   <<PK, auto>>
+  -- REFERENCED FIELDS --
+  + userId      : ObjectId   <<ref: users._id>>
+  + categoryId  : ObjectId   <<ref: categories._id>>
+  -- CORE FIELDS --
+  + name        : String     <<required, max:120>>
+  + description : String     <<optional>>
+  + prepTime    : Number
+  + cookTime    : Number
+  + servings    : Number
+  + difficulty  : String     <<enum>>
+  -- EMBEDDED SUB-DOCUMENTS --
+  + ingredients : Ingredient[]  <<embedded array>>
+  + instructions: Step[]        <<embedded array>>
+  + createdAt   : Date       <<auto>>
+  + updatedAt   : Date       <<auto>>
+}
+
+class "Ingredient\n(Embedded)" as Ingredient <<Embedded Sub-Document>> {
+  + name     : String   <<required>>
+  + quantity : String
+  + unit     : String
+}
+
+class "Step\n(Embedded)" as Step <<Embedded Sub-Document>> {
+  + order       : Number   <<required>>
+  + description : String   <<required>>
+}
+
+' ─── REFERENCING relationships ───
+Users      "1" o-- "0..*" Recipes     : references\n(userId → users._id)
+Categories "1" o-- "0..*" Recipes     : references\n(categoryId → categories._id)
+
+' ─── EMBEDDING relationships ───
+Recipes "1" *-- "1..*" Ingredient  : embeds\n(ingredients array)
+Recipes "1" *-- "1..*" Step        : embeds\n(instructions array)
+
+note bottom of Recipes
+  NoSQL Design Decisions:
+  ─────────────────────────────────────
+  REFERENCING — userId & categoryId:
+    Users and Categories are independent
+    entities managed in their own collections.
+    Recipes store only an ObjectId reference.
+    → Avoids data duplication across recipes.
+    → Category name changes require only one
+      update in the categories collection.
+
+  EMBEDDING — ingredients & instructions:
+    Ingredients and steps are owned exclusively
+    by a single recipe and are always read
+    together with it. Embedding them eliminates
+    a separate collection lookup and delivers
+    the full recipe in one db.recipes.findOne().
+    → Atomic read/write of the entire recipe.
+    → No JOIN-equivalent ($lookup) needed.
+end note
 
 @enduml
 ```
